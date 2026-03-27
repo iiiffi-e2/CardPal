@@ -1,6 +1,6 @@
 export type Condition = "NM" | "LP" | "MP" | "HP" | "DMG";
 export type EvaluationMode = "standard" | "kid";
-export type EvaluationResult = "BUY" | "NEGOTIATE" | "WALK";
+export type EvaluationResult = "BUY" | "NEGOTIATE" | "WALK" | "INSUFFICIENT_DATA";
 
 export type SearchCard = {
   id: string;
@@ -55,14 +55,15 @@ export type EvaluateResponse = {
   scripts: string[];
   selectedVariant: {
     name: string;
-    referenceSource: "market" | "mid" | "avgLowMid";
+    referenceSource: "market" | "mid" | "avgLowMid" | "lowFallback";
     referencePrice: number;
     adjustedPrice: number;
-  };
+  } | null;
   difference: {
     amount: number;
     percent: number;
-  };
+  } | null;
+  insufficientDataReason?: string;
   askingPrice: number;
   condition: Condition;
   mode: EvaluationMode;

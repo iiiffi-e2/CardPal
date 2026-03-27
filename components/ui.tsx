@@ -18,6 +18,9 @@ function resultColorClasses(result: EvaluationResult): string {
   if (result === "NEGOTIATE") {
     return "bg-negotiate text-slate-900";
   }
+  if (result === "INSUFFICIENT_DATA") {
+    return "bg-slate-600 text-slate-100";
+  }
   return "bg-walk text-slate-50";
 }
 
@@ -123,7 +126,9 @@ export function ResultBadge({
     BUY: "Good deal!",
     NEGOTIATE: "Ask lower",
     WALK: "Too expensive",
+    INSUFFICIENT_DATA: "Need more info",
   }[result];
+  const resultLabel = result === "INSUFFICIENT_DATA" ? "INSUFFICIENT DATA" : result;
 
   return (
     <div
@@ -132,8 +137,8 @@ export function ResultBadge({
         resultColorClasses(result),
       )}
     >
-      <p className="text-xs font-bold tracking-[0.18em] uppercase opacity-90">Result</p>
-      <p className="mt-2 text-6xl font-black tracking-tight">{result}</p>
+      <p className="text-xs font-bold tracking-[0.18em] uppercase opacity-90">Suggested action</p>
+      <p className="mt-2 text-6xl font-black tracking-tight">{resultLabel}</p>
       {kidMode ? <p className="mt-2 text-sm font-semibold opacity-90">{kidModeLabel}</p> : null}
     </div>
   );
@@ -141,16 +146,18 @@ export function ResultBadge({
 
 export function PriceBreakdown({
   askingPrice,
-  marketPrice,
+  referencePrice,
   differenceAmount,
   differencePercent,
   kidMode,
+  referenceLabel,
 }: {
   askingPrice: number;
-  marketPrice: number;
+  referencePrice: number;
   differenceAmount: number;
   differencePercent: number;
   kidMode: boolean;
+  referenceLabel: string;
 }) {
   const positive = differenceAmount > 0;
   const differenceColor = positive ? "text-walk" : "text-buy";
@@ -164,8 +171,8 @@ export function PriceBreakdown({
           <dd className="font-bold text-text-primary">{formatCurrency(askingPrice)}</dd>
         </div>
         <div className="flex items-center justify-between gap-3">
-          <dt className="text-text-secondary">Market</dt>
-          <dd className="font-bold text-text-primary">{formatCurrency(marketPrice)}</dd>
+          <dt className="text-text-secondary">{referenceLabel}</dt>
+          <dd className="font-bold text-text-primary">{formatCurrency(referencePrice)}</dd>
         </div>
         <div className="flex items-center justify-between gap-3">
           <dt className="text-text-secondary">Difference</dt>
@@ -176,6 +183,9 @@ export function PriceBreakdown({
           </dd>
         </div>
       </dl>
+      <p className="text-xs text-text-secondary">
+        Quick guide only: live show prices and card condition can vary.
+      </p>
     </CardShell>
   );
 }
@@ -230,6 +240,50 @@ export function ConditionPillSelector({
         );
       })}
     </div>
+  );
+}
+
+export function SearchResultSkeleton() {
+  return (
+    <CardShell className={classes("flex items-center gap-4 border", resultBorderClasses("NEGOTIATE"))}>
+      <div className="h-[124px] w-[88px] shrink-0 animate-pulse rounded-lg bg-slate-700/80" />
+      <div className="min-w-0 flex-1 space-y-2">
+        <div className="h-6 w-3/4 animate-pulse rounded-md bg-slate-700/80" />
+        <div className="h-4 w-1/2 animate-pulse rounded-md bg-slate-700/70" />
+      </div>
+    </CardShell>
+  );
+}
+
+export function CardDetailSkeleton() {
+  return (
+    <>
+      <CardShell className="space-y-5 text-center">
+        <div className="flex justify-center">
+          <div className="h-[336px] w-[240px] animate-pulse rounded-xl bg-slate-700/80" />
+        </div>
+        <div className="space-y-2">
+          <div className="mx-auto h-8 w-2/3 animate-pulse rounded-md bg-slate-700/80" />
+          <div className="mx-auto h-5 w-1/2 animate-pulse rounded-md bg-slate-700/70" />
+          <div className="mx-auto h-4 w-1/3 animate-pulse rounded-md bg-slate-700/60" />
+        </div>
+      </CardShell>
+      <CardShell className="space-y-6">
+        <div className="space-y-3">
+          <div className="h-5 w-44 animate-pulse rounded-md bg-slate-700/70" />
+          <div className="h-14 w-full animate-pulse rounded-xl bg-slate-700/80" />
+        </div>
+        <div className="space-y-3">
+          <div className="h-5 w-28 animate-pulse rounded-md bg-slate-700/70" />
+          <div className="grid grid-cols-5 gap-2">
+            {Array.from({ length: 5 }, (_, index) => (
+              <div key={index} className="h-12 animate-pulse rounded-full bg-slate-700/80" />
+            ))}
+          </div>
+        </div>
+        <div className="h-14 w-full animate-pulse rounded-xl bg-slate-700/80" />
+      </CardShell>
+    </>
   );
 }
 
