@@ -4,7 +4,13 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { CardShell, PageShell, PrimaryButton, SearchResultItem } from "@/components/ui";
+import {
+  CardShell,
+  PageShell,
+  PrimaryButton,
+  SearchResultItem,
+  SearchResultSkeleton,
+} from "@/components/ui";
 import { fetchSearchCards } from "@/lib/client/api";
 import { addRecentSearch, getKidMode } from "@/lib/client/storage";
 import type { SearchCard } from "@/lib/types";
@@ -78,14 +84,24 @@ export function SearchResultsScreen() {
       ) : null}
 
       {loading ? (
-        <CardShell className="py-5">
-          <p className="text-base text-text-secondary">Searching cards...</p>
-        </CardShell>
+        <div className="space-y-4">
+          <CardShell className="py-4">
+            <p className="text-base font-semibold text-text-secondary">
+              Searching cards...
+            </p>
+          </CardShell>
+          {Array.from({ length: 3 }, (_, index) => (
+            <SearchResultSkeleton key={index} />
+          ))}
+        </div>
       ) : null}
 
       {error ? (
         <CardShell className="space-y-4">
           <p className="text-base text-walk">{error}</p>
+          <p className="text-sm text-text-secondary">
+            You are close. Try again and we will fetch the latest matches.
+          </p>
           <PrimaryButton onClick={() => setReloadCount((current) => current + 1)} variant="ghost">
             Retry
           </PrimaryButton>
@@ -93,8 +109,13 @@ export function SearchResultsScreen() {
       ) : null}
 
       {!loading && !error && results.length === 0 ? (
-        <CardShell className="py-5">
-          <p className="text-base text-text-secondary">No cards found. Try another name.</p>
+        <CardShell className="space-y-2 py-5">
+          <p className="text-base font-semibold text-text-primary">
+            No cards found yet.
+          </p>
+          <p className="text-sm text-text-secondary">
+            Try a different spelling, set name, or card number.
+          </p>
         </CardShell>
       ) : null}
 

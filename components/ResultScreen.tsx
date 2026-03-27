@@ -33,6 +33,7 @@ export function ResultScreen() {
   const router = useRouter();
   const cardId = params.id;
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [copyError, setCopyError] = useState<string | null>(null);
   const [kidMode] = useState(() => getKidMode());
   const evaluationState = useMemo(() => {
     const raw = getLastEvaluation();
@@ -78,12 +79,14 @@ export function ResultScreen() {
   const copyScript = async (script: string, index: number) => {
     try {
       await navigator.clipboard.writeText(script);
+      setCopyError(null);
       setCopiedIndex(index);
       window.setTimeout(() => {
         setCopiedIndex((current) => (current === index ? null : current));
       }, 1400);
     } catch {
       setCopiedIndex(null);
+      setCopyError("Copy failed on this device. You can still select and copy the text manually.");
     }
   };
 
@@ -155,6 +158,7 @@ export function ResultScreen() {
             <p className="text-sm text-text-secondary">
               {kidMode ? "Short and friendly lines you can use." : "Use one of these lines at the table."}
             </p>
+            {copyError ? <p className="text-sm font-semibold text-negotiate">{copyError}</p> : null}
             <ul className="space-y-3">
               {result.scripts.map((script, index) => (
                 <ScriptCard

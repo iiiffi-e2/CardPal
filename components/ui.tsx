@@ -233,6 +233,50 @@ export function ConditionPillSelector({
   );
 }
 
+export function SearchResultSkeleton() {
+  return (
+    <CardShell className={classes("flex items-center gap-4 border", resultBorderClasses("NEGOTIATE"))}>
+      <div className="h-[124px] w-[88px] shrink-0 animate-pulse rounded-lg bg-slate-700/80" />
+      <div className="min-w-0 flex-1 space-y-2">
+        <div className="h-6 w-3/4 animate-pulse rounded-md bg-slate-700/80" />
+        <div className="h-4 w-1/2 animate-pulse rounded-md bg-slate-700/70" />
+      </div>
+    </CardShell>
+  );
+}
+
+export function CardDetailSkeleton() {
+  return (
+    <>
+      <CardShell className="space-y-5 text-center">
+        <div className="flex justify-center">
+          <div className="h-[336px] w-[240px] animate-pulse rounded-xl bg-slate-700/80" />
+        </div>
+        <div className="space-y-2">
+          <div className="mx-auto h-8 w-2/3 animate-pulse rounded-md bg-slate-700/80" />
+          <div className="mx-auto h-5 w-1/2 animate-pulse rounded-md bg-slate-700/70" />
+          <div className="mx-auto h-4 w-1/3 animate-pulse rounded-md bg-slate-700/60" />
+        </div>
+      </CardShell>
+      <CardShell className="space-y-6">
+        <div className="space-y-3">
+          <div className="h-5 w-44 animate-pulse rounded-md bg-slate-700/70" />
+          <div className="h-14 w-full animate-pulse rounded-xl bg-slate-700/80" />
+        </div>
+        <div className="space-y-3">
+          <div className="h-5 w-28 animate-pulse rounded-md bg-slate-700/70" />
+          <div className="grid grid-cols-5 gap-2">
+            {Array.from({ length: 5 }, (_, index) => (
+              <div key={index} className="h-12 animate-pulse rounded-full bg-slate-700/80" />
+            ))}
+          </div>
+        </div>
+        <div className="h-14 w-full animate-pulse rounded-xl bg-slate-700/80" />
+      </CardShell>
+    </>
+  );
+}
+
 export function SearchResultItem({
   card,
   href,

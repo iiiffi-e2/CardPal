@@ -6,6 +6,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import {
+  CardDetailSkeleton,
   CardShell,
   ConditionPillSelector,
   PageShell,
@@ -88,10 +89,39 @@ export function CardDetailScreen() {
   }, [cardId, reloadCount]);
 
   const parsedAskingPrice = useMemo(() => Number(askingPrice), [askingPrice]);
+  const trimmedAskingPrice = askingPrice.trim();
+  const hasEnteredAskingPrice = trimmedAskingPrice.length > 0;
+  const hasNumericAskingPrice = Number.isFinite(parsedAskingPrice);
+  const hasPositiveAskingPrice = hasNumericAskingPrice && parsedAskingPrice > 0;
+  const hasTooManyDecimals = /^\d+(\.\d{3,})$/.test(trimmedAskingPrice);
+  const isAskingPriceTooHigh = hasNumericAskingPrice && parsedAskingPrice > 100000;
+  const askingPriceError = useMemo(() => {
+    if (!hasEnteredAskingPrice) {
+      return "Enter the asking price to continue.";
+    }
+    if (!hasNumericAskingPrice) {
+      return "Enter a valid number like 125 or 125.50.";
+    }
+    if (!hasPositiveAskingPrice) {
+      return "Asking price must be greater than $0.";
+    }
+    if (hasTooManyDecimals) {
+      return "Use no more than 2 decimal places.";
+    }
+    if (isAskingPriceTooHigh) {
+      return "Please enter a realistic asking price.";
+    }
+    return null;
+  }, [
+    hasEnteredAskingPrice,
+    hasNumericAskingPrice,
+    hasPositiveAskingPrice,
+    hasTooManyDecimals,
+    isAskingPriceTooHigh,
+  ]);
   const canSubmit =
     !!card &&
-    Number.isFinite(parsedAskingPrice) &&
-    parsedAskingPrice > 0 &&
+    !askingPriceError &&
     !submitting &&
     !loading;
 
@@ -159,11 +189,7 @@ export function CardDetailScreen() {
         </Link>
       </CardShell>
 
-      {loading ? (
-        <CardShell className="py-5">
-          <p className="text-base text-text-secondary">Loading card...</p>
-        </CardShell>
-      ) : null}
+      {loading ? <CardDetailSkeleton /> : null}
 
       {loadError ? (
         <CardShell className="space-y-3">
@@ -221,6 +247,13 @@ export function CardDetailScreen() {
                     "placeholder:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring",
                   )}
                 />
+                {askingPriceError ? (
+                  <p className="text-sm font-semibold text-negotiate">{askingPriceError}</p>
+                ) : (
+                  <p className="text-sm text-text-secondary">
+                    Nice. Tap the button below when the price looks right.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-3">
@@ -232,7 +265,11 @@ export function CardDetailScreen() {
                 />
               </div>
 
-              {submitError ? <p className="text-sm font-semibold text-walk">{submitError}</p> : null}
+              {submitError ? (
+                <p className="text-sm font-semibold text-walk">
+                  {submitError} Please try again in a moment.
+                </p>
+              ) : null}
 
               <PrimaryButton type="submit" disabled={!canSubmit}>
                 {submitting ? "Evaluating..." : "Get Recommendation"}

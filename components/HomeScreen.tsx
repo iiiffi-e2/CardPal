@@ -93,7 +93,9 @@ export function HomeScreen() {
       <CardShell className="space-y-4">
         <p className="text-base font-bold tracking-tight text-text-primary">Recent searches</p>
         {recentSearches.length === 0 ? (
-          <p className="text-sm text-text-secondary">No recent searches yet.</p>
+          <p className="text-sm text-text-secondary">
+            No recent searches yet. Your last lookups will show here.
+          </p>
         ) : (
           <div className="-mx-4 overflow-x-auto px-4 pb-1">
             <div className="flex gap-3">
