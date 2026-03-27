@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import {
@@ -30,6 +30,7 @@ function actionVariant(result: EvaluationResult): "buy" | "negotiate" | "walk" {
 
 export function ResultScreen() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const cardId = params.id;
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [kidMode] = useState(() => getKidMode());
@@ -144,7 +145,7 @@ export function ResultScreen() {
 
           <CardShell className="space-y-4">
             <p className="text-xl font-extrabold tracking-tight text-text-primary">
-              What to say
+              Scripts
             </p>
             <p className="text-sm text-text-secondary">
               {kidMode ? "Short and friendly lines you can use." : "Use one of these lines at the table."}
@@ -162,14 +163,16 @@ export function ResultScreen() {
           </CardShell>
 
           <div className="space-y-3">
-            <Link href={`/card/${encodeURIComponent(cardId)}?asking=${encodeURIComponent(String(result.askingPrice))}`}>
+            <Link
+              href={`/card/${encodeURIComponent(cardId)}?asking=${encodeURIComponent(String(result.askingPrice))}&condition=${encodeURIComponent(result.condition)}`}
+            >
               <PrimaryButton variant={buttonVariant}>Try another price</PrimaryButton>
             </Link>
             <PrimaryButton
               variant="surface"
               onClick={() => {
                 clearLastEvaluation();
-                window.location.href = "/";
+                router.push("/");
               }}
             >
               Search another card

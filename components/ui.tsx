@@ -124,7 +124,6 @@ export function ResultBadge({
     NEGOTIATE: "Ask lower",
     WALK: "Too expensive",
   }[result];
-  const label = kidMode ? kidModeLabel : result;
 
   return (
     <div
@@ -134,7 +133,8 @@ export function ResultBadge({
       )}
     >
       <p className="text-xs font-bold tracking-[0.18em] uppercase opacity-90">Result</p>
-      <p className="mt-2 text-6xl font-black tracking-tight">{label}</p>
+      <p className="mt-2 text-6xl font-black tracking-tight">{result}</p>
+      {kidMode ? <p className="mt-2 text-sm font-semibold opacity-90">{kidModeLabel}</p> : null}
     </div>
   );
 }
@@ -193,7 +193,7 @@ export function ScriptCard({
     <li className="space-y-3 rounded-2xl bg-slate-800/80 p-4">
       <p className="text-base leading-relaxed text-text-primary">{script}</p>
       <PrimaryButton variant="ghost" className="min-h-11 text-sm font-semibold" onClick={onCopy}>
-        {copied ? "Copied" : "Copy"}
+        {copied ? "Copied" : "Copy script"}
       </PrimaryButton>
     </li>
   );

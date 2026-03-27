@@ -9,18 +9,20 @@ import { addRecentSearch, getKidMode, getRecentSearches, setKidMode } from "@/li
 export function HomeScreen() {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const [navigating, setNavigating] = useState(false);
   const [kidMode, setKidModeState] = useState<boolean>(() => getKidMode());
   const [recentSearches, setRecentSearches] = useState<string[]>(() =>
     getRecentSearches(),
   );
 
-  const canSearch = useMemo(() => query.trim().length > 1, [query]);
+  const canSearch = useMemo(() => query.trim().length > 1 && !navigating, [navigating, query]);
 
   const goToSearch = (searchText: string) => {
     const trimmed = searchText.trim();
     if (!trimmed) {
       return;
     }
+    setNavigating(true);
     const nextSearches = addRecentSearch(trimmed);
     setRecentSearches(nextSearches);
     router.push(`/search?q=${encodeURIComponent(trimmed)}`);
@@ -57,7 +59,7 @@ export function HomeScreen() {
           />
         </div>
         <PrimaryButton type="submit" disabled={!canSearch}>
-          Find Card
+          {navigating ? "Opening results..." : "Find Card"}
         </PrimaryButton>
       </form>
 

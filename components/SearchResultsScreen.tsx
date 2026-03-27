@@ -16,6 +16,7 @@ export function SearchResultsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [kidMode, setKidModeState] = useState(false);
+  const [reloadCount, setReloadCount] = useState(0);
 
   useEffect(() => {
     setKidModeState(getKidMode());
@@ -26,6 +27,7 @@ export function SearchResultsScreen() {
     async function load() {
       if (!query) {
         setLoading(false);
+        setError(null);
         setResults([]);
         return;
       }
@@ -56,7 +58,7 @@ export function SearchResultsScreen() {
     return () => {
       active = false;
     };
-  }, [query]);
+  }, [query, reloadCount]);
 
   return (
     <PageShell
@@ -84,7 +86,7 @@ export function SearchResultsScreen() {
       {error ? (
         <CardShell className="space-y-4">
           <p className="text-base text-walk">{error}</p>
-          <PrimaryButton onClick={() => window.location.reload()} variant="ghost">
+          <PrimaryButton onClick={() => setReloadCount((current) => current + 1)} variant="ghost">
             Retry
           </PrimaryButton>
         </CardShell>

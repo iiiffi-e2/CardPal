@@ -24,25 +24,45 @@ export function CardDetailScreen() {
   const router = useRouter();
   const cardId = params.id;
   const searchQuery = searchParams.get("q")?.trim();
+  const presetAsking = searchParams.get("asking");
+  const presetCondition = searchParams.get("condition");
+
+  const initialCondition = ((): Condition => {
+    if (presetCondition === "NM" || presetCondition === "LP" || presetCondition === "MP" || presetCondition === "HP" || presetCondition === "DMG") {
+      return presetCondition;
+    }
+    return "LP";
+  })();
 
   const [card, setCard] = useState<CardDetail | null>(null);
-  const [askingPrice, setAskingPrice] = useState("");
-  const [condition, setCondition] = useState<Condition>("LP");
+  const [askingPrice, setAskingPrice] = useState(() => {
+    if (!presetAsking) {
+      return "";
+    }
+    const parsed = Number(presetAsking);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return "";
+    }
+    return parsed.toFixed(2);
+  });
+  const [condition, setCondition] = useState<Condition>(initialCondition);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [reloadCount, setReloadCount] = useState(0);
 
   useEffect(() => {
     let active = true;
     async function load() {
       if (!cardId) {
         setLoading(false);
-        setError("Missing card id.");
+        setLoadError("Missing card id.");
         return;
       }
 
       setLoading(true);
-      setError(null);
+      setLoadError(null);
       try {
         const response = await fetchCardDetail(cardId);
         if (!active) {
@@ -53,7 +73,7 @@ export function CardDetailScreen() {
         if (!active) {
           return;
         }
-        setError(loadError instanceof Error ? loadError.message : "Failed to load card detail.");
+        setLoadError(loadError instanceof Error ? loadError.message : "Failed to load card detail.");
       } finally {
         if (active) {
           setLoading(false);
@@ -65,7 +85,7 @@ export function CardDetailScreen() {
     return () => {
       active = false;
     };
-  }, [cardId]);
+  }, [cardId, reloadCount]);
 
   const parsedAskingPrice = useMemo(() => Number(askingPrice), [askingPrice]);
   const canSubmit =
@@ -84,7 +104,7 @@ export function CardDetailScreen() {
     }
 
     setSubmitting(true);
-    setError(null);
+    setSubmitError(null);
     try {
       const mode = getEvaluationMode();
       const result = await postEvaluateCard({
@@ -94,13 +114,42 @@ export function CardDetailScreen() {
         mode,
       });
       setLastEvaluation(JSON.stringify(result));
+      router.prefetch(`/card/${encodeURIComponent(card.id)}/result`);
       router.push(`/card/${encodeURIComponent(card.id)}/result`);
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Failed to evaluate card.");
+      setSubmitError(submitError instanceof Error ? submitError.message : "Failed to evaluate card.");
     } finally {
       setSubmitting(false);
     }
   };
+
+  const marketHint = useMemo(() => {
+    if (!card) {
+      return "N/A";
+    }
+    const preferred = ["normal", "holofoil", "reverseHolofoil"];
+    const entries = Object.entries(card.tcgplayer.prices);
+    const ordered = [
+      ...preferred
+        .filter((variant) => card.tcgplayer.prices[variant])
+        .map((variant) => [variant, card.tcgplayer.prices[variant]] as const),
+      ...entries.filter(([variant]) => !preferred.includes(variant)),
+    ];
+
+    for (const [, point] of ordered) {
+      if (typeof point.market === "number") {
+        return point.market.toFixed(2);
+      }
+      if (typeof point.mid === "number") {
+        return point.mid.toFixed(2);
+      }
+      if (typeof point.low === "number") {
+        return point.low.toFixed(2);
+      }
+    }
+
+    return "N/A";
+  }, [card]);
 
   return (
     <PageShell title="Card detail" subtitle="Set the price and get a fast recommendation.">
@@ -116,10 +165,10 @@ export function CardDetailScreen() {
         </CardShell>
       ) : null}
 
-      {error ? (
+      {loadError ? (
         <CardShell className="space-y-3">
-          <p className="text-base text-walk">{error}</p>
-          <PrimaryButton onClick={() => window.location.reload()} variant="surface">
+          <p className="text-base text-walk">{loadError}</p>
+          <PrimaryButton onClick={() => setReloadCount((current) => current + 1)} variant="surface">
             Retry
           </PrimaryButton>
         </CardShell>
@@ -147,7 +196,7 @@ export function CardDetailScreen() {
                 {card.setName} #{card.number} · {card.rarity}
               </p>
               <p className="text-sm text-text-secondary">
-                Market ~ ${card.tcgplayer.prices.normal?.market ?? card.tcgplayer.prices.holofoil?.market ?? "N/A"}
+                Market ~ ${marketHint}
               </p>
             </div>
           </CardShell>
@@ -182,6 +231,8 @@ export function CardDetailScreen() {
                   options={CONDITIONS}
                 />
               </div>
+
+              {submitError ? <p className="text-sm font-semibold text-walk">{submitError}</p> : null}
 
               <PrimaryButton type="submit" disabled={!canSubmit}>
                 {submitting ? "Evaluating..." : "Get Recommendation"}
