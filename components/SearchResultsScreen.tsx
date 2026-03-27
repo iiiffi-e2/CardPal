@@ -1,18 +1,13 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { CardShell, PageShell, PrimaryButton } from "@/components/ui";
+import { CardShell, PageShell, PrimaryButton, SearchResultItem } from "@/components/ui";
 import { fetchSearchCards } from "@/lib/client/api";
 import { addRecentSearch, getKidMode } from "@/lib/client/storage";
 import type { SearchCard } from "@/lib/types";
-
-function classes(...parts: Array<string | false | null | undefined>) {
-  return parts.filter(Boolean).join(" ");
-}
 
 export function SearchResultsScreen() {
   const searchParams = useSearchParams();
@@ -64,28 +59,31 @@ export function SearchResultsScreen() {
   }, [query]);
 
   return (
-    <PageShell title="Search Results" subtitle={query ? `Showing matches for "${query}"` : "Search for a card to begin."}>
-      <CardShell>
-        <Link href="/" className="text-sm font-medium text-blue-700">
-          ← Back to search
+    <PageShell
+      title="Search results"
+      subtitle={query ? `Matches for "${query}"` : "Search for a card to begin."}
+    >
+      <CardShell className="py-3">
+        <Link href="/" className="inline-block text-base font-semibold text-text-secondary transition duration-150 active:scale-[0.98]">
+          Back
         </Link>
       </CardShell>
 
       {kidMode ? (
-        <CardShell className="text-sm text-slate-700">
-          Kid mode is ON. Recommendation scripts will use friendlier wording.
+        <CardShell className="py-4">
+          <p className="text-base font-semibold text-negotiate">Kid Mode is on</p>
         </CardShell>
       ) : null}
 
       {loading ? (
-        <CardShell>
-          <p className="text-sm text-slate-600">Searching cards...</p>
+        <CardShell className="py-5">
+          <p className="text-base text-text-secondary">Searching cards...</p>
         </CardShell>
       ) : null}
 
       {error ? (
-        <CardShell className="space-y-3 border-rose-200">
-          <p className="text-sm text-rose-700">{error}</p>
+        <CardShell className="space-y-4">
+          <p className="text-base text-walk">{error}</p>
           <PrimaryButton onClick={() => window.location.reload()} variant="ghost">
             Retry
           </PrimaryButton>
@@ -93,49 +91,19 @@ export function SearchResultsScreen() {
       ) : null}
 
       {!loading && !error && results.length === 0 ? (
-        <CardShell>
-          <p className="text-sm text-slate-600">No cards found. Try a different card name.</p>
+        <CardShell className="py-5">
+          <p className="text-base text-text-secondary">No cards found. Try another name.</p>
         </CardShell>
       ) : null}
 
       {!loading && !error && results.length > 0 ? (
-        <ul className="space-y-3">
+        <ul className="space-y-4">
           {results.map((card) => (
             <li key={card.id}>
-              <Link
+              <SearchResultItem
+                card={card}
                 href={`/card/${encodeURIComponent(card.id)}?q=${encodeURIComponent(query)}`}
-                className="block"
-              >
-                <CardShell className="flex items-center gap-3 active:scale-[0.99]">
-                  {card.imageSmall ? (
-                    <Image
-                      src={card.imageSmall}
-                      alt={card.name}
-                      width={72}
-                      height={100}
-                      className="h-[100px] w-[72px] rounded-md object-cover"
-                    />
-                  ) : (
-                    <div className="h-[100px] w-[72px] rounded-md bg-slate-200" />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-base font-semibold text-slate-900">{card.name}</p>
-                    <p className="text-sm text-slate-600">
-                      {card.setName} • #{card.number}
-                    </p>
-                    <p
-                      className={classes(
-                        "text-xs",
-                        card.rarity === "Rare Holo"
-                          ? "font-semibold text-amber-700"
-                          : "text-slate-500",
-                      )}
-                    >
-                      {card.rarity}
-                    </p>
-                  </div>
-                </CardShell>
-              </Link>
+              />
             </li>
           ))}
         </ul>

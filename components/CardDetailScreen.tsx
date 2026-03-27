@@ -5,7 +5,13 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
-import { CardShell, PageShell, PrimaryButton } from "@/components/ui";
+import {
+  CardShell,
+  ConditionPillSelector,
+  PageShell,
+  PrimaryButton,
+  classes,
+} from "@/components/ui";
 import { fetchCardDetail, postEvaluateCard } from "@/lib/client/api";
 import { getEvaluationMode, setLastEvaluation } from "@/lib/client/storage";
 import type { CardDetail, Condition } from "@/lib/types";
@@ -97,23 +103,23 @@ export function CardDetailScreen() {
   };
 
   return (
-    <PageShell title="Card Detail" subtitle="Set asking price and card condition.">
+    <PageShell title="Card detail" subtitle="Set the price and get a fast recommendation.">
       <CardShell>
-        <Link href={backHref} className="text-sm font-medium text-blue-700">
-          ← Back to results
+        <Link href={backHref} className="text-base font-semibold text-text-secondary">
+          Back
         </Link>
       </CardShell>
 
       {loading ? (
-        <CardShell>
-          <p className="text-sm text-slate-600">Loading card...</p>
+        <CardShell className="py-5">
+          <p className="text-base text-text-secondary">Loading card...</p>
         </CardShell>
       ) : null}
 
       {error ? (
-        <CardShell className="space-y-3 border-rose-200">
-          <p className="text-sm text-rose-700">{error}</p>
-          <PrimaryButton onClick={() => window.location.reload()} variant="ghost">
+        <CardShell className="space-y-3">
+          <p className="text-base text-walk">{error}</p>
+          <PrimaryButton onClick={() => window.location.reload()} variant="surface">
             Retry
           </PrimaryButton>
         </CardShell>
@@ -121,33 +127,35 @@ export function CardDetailScreen() {
 
       {card ? (
         <>
-          <CardShell className="space-y-3">
-            <div className="flex items-start gap-3">
-              {card.images.small ? (
+          <CardShell className="space-y-5 text-center">
+            <div className="flex justify-center">
+              {card.images.large || card.images.small ? (
                 <Image
-                  src={card.images.small}
+                  src={card.images.large || card.images.small}
                   alt={card.name}
-                  width={92}
-                  height={128}
-                  className="h-[128px] w-[92px] rounded-md object-cover"
+                  width={240}
+                  height={336}
+                  className="h-[336px] w-[240px] rounded-xl object-cover"
                 />
               ) : (
-                <div className="h-[128px] w-[92px] rounded-md bg-slate-200" />
+                <div className="h-[336px] w-[240px] rounded-xl bg-slate-700" />
               )}
-              <div className="min-w-0">
-                <h2 className="text-lg font-bold text-slate-900">{card.name}</h2>
-                <p className="text-sm text-slate-600">
-                  {card.setName} • #{card.number}
-                </p>
-                <p className="text-xs text-slate-500">{card.rarity}</p>
-              </div>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-3xl font-extrabold tracking-tight text-text-primary">{card.name}</h2>
+              <p className="text-base text-text-secondary">
+                {card.setName} #{card.number} · {card.rarity}
+              </p>
+              <p className="text-sm text-text-secondary">
+                Market ~ ${card.tcgplayer.prices.normal?.market ?? card.tcgplayer.prices.holofoil?.market ?? "N/A"}
+              </p>
             </div>
           </CardShell>
 
           <CardShell>
-            <form onSubmit={onSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="askingPrice" className="text-sm font-semibold text-slate-800">
+            <form onSubmit={onSubmit} className="space-y-6">
+              <div className="space-y-3">
+                <label htmlFor="askingPrice" className="text-base font-bold tracking-tight text-text-primary">
                   Dealer asking price ($)
                 </label>
                 <input
@@ -159,28 +167,20 @@ export function CardDetailScreen() {
                   value={askingPrice}
                   onChange={(event) => setAskingPrice(event.target.value)}
                   placeholder="0.00"
-                  className="w-full rounded-xl border border-slate-300 px-3 py-3 text-base outline-none ring-blue-500 focus:ring-2"
+                  className={classes(
+                    "min-h-14 w-full rounded-xl bg-slate-900 px-4 text-2xl font-bold tracking-tight text-text-primary",
+                    "placeholder:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring",
+                  )}
                 />
               </div>
 
-              <div className="space-y-2">
-                <p className="text-sm font-semibold text-slate-800">Condition</p>
-                <div className="grid grid-cols-5 gap-2">
-                  {CONDITIONS.map((value) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setCondition(value)}
-                      className={`rounded-xl px-2 py-3 text-sm font-semibold transition ${
-                        condition === value
-                          ? "bg-blue-600 text-white"
-                          : "bg-slate-100 text-slate-800"
-                      }`}
-                    >
-                      {value}
-                    </button>
-                  ))}
-                </div>
+              <div className="space-y-3">
+                <p className="text-base font-bold tracking-tight text-text-primary">Condition</p>
+                <ConditionPillSelector
+                  value={condition}
+                  onChange={setCondition}
+                  options={CONDITIONS}
+                />
               </div>
 
               <PrimaryButton type="submit" disabled={!canSubmit}>

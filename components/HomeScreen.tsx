@@ -3,7 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { CardShell, PageShell, PrimaryButton } from "@/components/ui";
+import { CardShell, PageShell, PrimaryButton, classes } from "@/components/ui";
 import { addRecentSearch, getKidMode, getRecentSearches, setKidMode } from "@/lib/client/storage";
 
 export function HomeScreen() {
@@ -38,63 +38,74 @@ export function HomeScreen() {
   };
 
   return (
-    <PageShell
-      title="CardPal"
-      subtitle="Scan the market and decide whether to BUY, NEGOTIATE, or WALK."
-    >
-      <CardShell className="space-y-3">
-        <form className="space-y-3" onSubmit={onSubmit}>
-          <label htmlFor="search" className="block text-sm font-medium text-slate-700">
-            Search card name
-          </label>
+    <PageShell title="CardPal" subtitle="Know when to buy, negotiate, or walk.">
+      <form className="space-y-3" onSubmit={onSubmit}>
+        <label htmlFor="search" className="sr-only">
+          Search card name
+        </label>
+        <div className="rounded-2xl bg-surface p-2 shadow-[0_12px_30px_rgba(2,6,23,0.45)]">
           <input
             id="search"
             type="text"
             value={query}
-            placeholder="e.g. Charizard"
+            placeholder="Search any card"
             onChange={(event) => setQuery(event.target.value)}
-            className="w-full rounded-xl border border-slate-300 px-3 py-3 text-base outline-none ring-blue-500 focus:ring-2"
+            className={classes(
+              "min-h-14 w-full rounded-xl bg-slate-900 px-4 text-lg font-semibold tracking-tight text-text-primary",
+              "placeholder:text-text-secondary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring",
+            )}
           />
-          <PrimaryButton type="submit" disabled={!canSearch}>
-            Search Cards
-          </PrimaryButton>
-        </form>
-      </CardShell>
+        </div>
+        <PrimaryButton type="submit" disabled={!canSearch}>
+          Find Card
+        </PrimaryButton>
+      </form>
 
       <CardShell className="space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-slate-900">Kid mode</p>
-            <p className="text-xs text-slate-600">Friendlier script wording for younger collectors.</p>
-          </div>
+          <p className="text-lg font-bold tracking-tight text-text-primary">Kid Mode</p>
           <button
             type="button"
             onClick={onToggleKidMode}
-            className={`h-10 min-w-20 rounded-full px-3 text-sm font-semibold transition ${
-              kidMode ? "bg-amber-500 text-slate-900" : "bg-slate-200 text-slate-700"
-            }`}
+            role="switch"
+            aria-checked={kidMode}
+            className={classes(
+              "relative h-9 w-16 rounded-full transition-colors duration-200 active:scale-[0.98]",
+              kidMode ? "bg-buy" : "bg-slate-700",
+            )}
           >
-            {kidMode ? "ON" : "OFF"}
+            <span
+              className={classes(
+                "absolute top-1 h-7 w-7 rounded-full bg-slate-100 transition-all duration-200",
+                kidMode ? "left-8" : "left-1",
+              )}
+            />
           </button>
         </div>
+        <p className="text-sm text-text-secondary">
+          Shorter language, more color, and easier recommendations.
+        </p>
       </CardShell>
 
-      <CardShell className="space-y-2">
-        <p className="text-sm font-semibold text-slate-900">Recent searches</p>
+      <CardShell className="space-y-4">
+        <p className="text-base font-bold tracking-tight text-text-primary">Recent searches</p>
         {recentSearches.length === 0 ? (
-          <p className="text-sm text-slate-500">No recent searches yet.</p>
+          <p className="text-sm text-text-secondary">No recent searches yet.</p>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <div className="-mx-4 overflow-x-auto px-4 pb-1">
+            <div className="flex gap-3">
             {recentSearches.map((item) => (
               <button
                 key={item}
                 type="button"
                 onClick={() => goToSearch(item)}
-                className="rounded-full bg-slate-100 px-3 py-2 text-sm font-medium text-slate-800"
+                className="min-w-28 shrink-0 rounded-2xl bg-slate-800/90 p-2 text-left transition duration-150 active:scale-[0.97]"
               >
-                {item}
+                <div className="h-20 w-full rounded-xl bg-slate-700/80" />
+                <p className="mt-2 truncate text-sm font-semibold text-text-primary">{item}</p>
               </button>
             ))}
+            </div>
           </div>
         )}
       </CardShell>
