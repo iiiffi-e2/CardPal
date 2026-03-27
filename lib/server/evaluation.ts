@@ -13,7 +13,7 @@ import { getCardDetail } from "@/lib/server/cards";
 type VariantSelection = {
   variantName: string;
   referencePrice: number;
-  referenceSource: "market" | "mid" | "avgLowMid";
+  referenceSource: "market" | "mid" | "avgLowMid" | "lowFallback";
 };
 
 const CONDITION_MULTIPLIERS: Record<Condition, number> = {
@@ -26,9 +26,22 @@ const CONDITION_MULTIPLIERS: Record<Condition, number> = {
 
 const PREFERRED_VARIANTS = ["holofoil", "reverseHolofoil", "normal"];
 
+function referenceSourceRank(source: VariantSelection["referenceSource"]): number {
+  if (source === "market") {
+    return 4;
+  }
+  if (source === "mid") {
+    return 3;
+  }
+  if (source === "avgLowMid") {
+    return 2;
+  }
+  return 1;
+}
+
 function pickReferencePrice(pricePoint: PricePoint):
   | {
-      source: "market" | "mid" | "avgLowMid";
+      source: "market" | "mid" | "avgLowMid" | "lowFallback";
       value: number;
     }
   | undefined {
@@ -40,17 +53,35 @@ function pickReferencePrice(pricePoint: PricePoint):
     return { source: "mid", value: pricePoint.mid };
   }
 
-  if (typeof pricePoint.low === "number" && typeof pricePoint.mid === "number") {
+  if (
+    typeof pricePoint.low === "number" &&
+    Number.isFinite(pricePoint.low) &&
+    pricePoint.low > 0 &&
+    typeof pricePoint.mid === "number" &&
+    Number.isFinite(pricePoint.mid) &&
+    pricePoint.mid > 0
+  ) {
     return {
       source: "avgLowMid",
       value: (pricePoint.low + pricePoint.mid) / 2,
     };
   }
 
-  if (typeof pricePoint.low === "number") {
+  if (typeof pricePoint.low === "number" && Number.isFinite(pricePoint.low) && pricePoint.low > 0) {
     return {
-      source: "avgLowMid",
+      source: "lowFallback",
       value: pricePoint.low,
+    };
+  }
+
+  if (
+    typeof pricePoint.directLow === "number" &&
+    Number.isFinite(pricePoint.directLow) &&
+    pricePoint.directLow > 0
+  ) {
+    return {
+      source: "lowFallback",
+      value: pricePoint.directLow,
     };
   }
 
@@ -58,26 +89,49 @@ function pickReferencePrice(pricePoint: PricePoint):
 }
 
 function selectVariant(prices: Record<string, PricePoint>): VariantSelection | undefined {
-  const preferred = PREFERRED_VARIANTS
-    .filter((variant) => prices[variant])
-    .map((variant) => [variant, prices[variant]] as const);
-  const others = Object.entries(prices).filter(
-    ([variant]) => !PREFERRED_VARIANTS.includes(variant),
+  const preferredOrder = new Map(
+    PREFERRED_VARIANTS.map((variant, index) => [variant, index] as const),
   );
+  const candidates: Array<
+    VariantSelection & { sourceRank: number; preferredRank: number }
+  > = [];
 
-  for (const [variantName, pricePoint] of [...preferred, ...others]) {
+  for (const [variantName, pricePoint] of Object.entries(prices)) {
     const reference = pickReferencePrice(pricePoint);
     if (!reference) {
       continue;
     }
-    return {
+
+    const normalizedVariant = variantName.toLowerCase();
+    candidates.push({
       variantName,
       referencePrice: reference.value,
       referenceSource: reference.source,
-    };
+      sourceRank: referenceSourceRank(reference.source),
+      preferredRank: preferredOrder.get(normalizedVariant) ?? Number.MAX_SAFE_INTEGER,
+    });
   }
 
-  return undefined;
+  if (candidates.length === 0) {
+    return undefined;
+  }
+
+  candidates.sort((left, right) => {
+    if (left.sourceRank !== right.sourceRank) {
+      return right.sourceRank - left.sourceRank;
+    }
+    if (left.preferredRank !== right.preferredRank) {
+      return left.preferredRank - right.preferredRank;
+    }
+    return left.variantName.localeCompare(right.variantName);
+  });
+
+  const [best] = candidates;
+  return {
+    variantName: best.variantName,
+    referencePrice: best.referencePrice,
+    referenceSource: best.referenceSource,
+  };
 }
 
 function roundCurrency(value: number): number {
@@ -99,6 +153,10 @@ function scriptsForResult(result: EvaluationResult, mode: EvaluationMode): strin
         "Thanks for showing it to me. I am going to pass at this price.",
         "I appreciate it, but I need to stay closer to market on this one.",
       ],
+      INSUFFICIENT_DATA: [
+        "I like the card, but I do not have enough recent pricing data to be confident.",
+        "Can we review more comps or details before deciding on a price?",
+      ],
     },
     kid: {
       BUY: [
@@ -113,6 +171,10 @@ function scriptsForResult(result: EvaluationResult, mode: EvaluationMode): strin
         "Thank you! I will keep looking for another one.",
         "It is a cool card, but I need to pass for now.",
       ],
+      INSUFFICIENT_DATA: [
+        "I like this card, but we need a little more price info first.",
+        "Can we check another comp before we decide?",
+      ],
     },
   } as const;
 
@@ -125,9 +187,16 @@ function buildExplanation(params: {
   differenceAmount: number;
   condition: Condition;
   variantName: string;
-  referenceSource: "market" | "mid" | "avgLowMid";
+  referenceSource: "market" | "mid" | "avgLowMid" | "lowFallback";
   usedLowPriceRule: boolean;
+  insufficientDataReason?: string;
 }): string {
+  if (params.result === "INSUFFICIENT_DATA") {
+    return params.insufficientDataReason
+      ? `There is not enough reliable pricing data yet: ${params.insufficientDataReason}. Try another listing, comp, or ask for condition details before deciding.`
+      : "There is not enough reliable pricing data yet to make a confident recommendation.";
+  }
+
   const diffLabel =
     params.differenceAmount > 0
       ? `$${Math.abs(params.differenceAmount).toFixed(2)} above`
@@ -182,16 +251,97 @@ function decideResult(params: {
   return { result: "WALK", usedLowPriceRule: false };
 }
 
+function insufficientDataResponse(params: {
+  input: EvaluateInput;
+  card: Awaited<ReturnType<typeof getCardDetail>>;
+  reason: string;
+}): EvaluateResponse {
+  const askingPrice = roundCurrency(params.input.askingPrice);
+  return {
+    card: {
+      id: params.card.id,
+      name: params.card.name,
+      number: params.card.number,
+      setName: params.card.setName,
+      imageSmall: params.card.images.small,
+    },
+    result: "INSUFFICIENT_DATA",
+    explanation: buildExplanation({
+      result: "INSUFFICIENT_DATA",
+      adjustedPrice: 0,
+      differenceAmount: 0,
+      condition: params.input.condition,
+      variantName: "unknown variant",
+      referenceSource: "lowFallback",
+      usedLowPriceRule: false,
+      insufficientDataReason: params.reason,
+    }),
+    scripts: scriptsForResult("INSUFFICIENT_DATA", params.input.mode),
+    selectedVariant: null,
+    difference: null,
+    insufficientDataReason: params.reason,
+    askingPrice,
+    condition: params.input.condition,
+    mode: params.input.mode,
+  };
+}
+
 export async function evaluateCard(input: EvaluateInput): Promise<EvaluateResponse> {
+  if (!Number.isFinite(input.askingPrice) || input.askingPrice <= 0) {
+    throw new Error("Asking price must be greater than $0.");
+  }
+  if (input.askingPrice > 100000) {
+    throw new Error("Asking price looks too high. Please check the number and try again.");
+  }
+
   const card = await getCardDetail(input.cardId);
+  if (!card.id || !card.name) {
+    return insufficientDataResponse({
+      input,
+      card,
+      reason: "card details are incomplete from the source",
+    });
+  }
+
+  const priceVariants = Object.values(card.tcgplayer.prices);
+  const variantWithAnyPrice = priceVariants.some((point) => {
+    const values = [point.market, point.mid, point.low, point.directLow];
+    return values.some((value) => typeof value === "number" && Number.isFinite(value) && value > 0);
+  });
+  if (!variantWithAnyPrice) {
+    return insufficientDataResponse({
+      input,
+      card,
+      reason: "no tcgplayer pricing was available for this card",
+    });
+  }
+
   const selectedVariant = selectVariant(card.tcgplayer.prices);
 
   if (!selectedVariant) {
-    throw new Error("No usable pricing variant found for this card.");
+    return insufficientDataResponse({
+      input,
+      card,
+      reason: "pricing variants exist, but none had enough usable data",
+    });
+  }
+  if (selectedVariant.referenceSource === "lowFallback") {
+    return insufficientDataResponse({
+      input,
+      card,
+      reason: "only low-confidence fallback pricing was available",
+    });
   }
 
   const multiplier = CONDITION_MULTIPLIERS[input.condition];
   const adjustedPrice = roundCurrency(selectedVariant.referencePrice * multiplier);
+  if (!Number.isFinite(adjustedPrice) || adjustedPrice <= 0) {
+    return insufficientDataResponse({
+      input,
+      card,
+      reason: "the adjusted reference price could not be calculated",
+    });
+  }
   const askingPrice = roundCurrency(input.askingPrice);
   const differenceAmount = roundCurrency(askingPrice - adjustedPrice);
   const differencePercent =
@@ -227,6 +377,7 @@ export async function evaluateCard(input: EvaluateInput): Promise<EvaluateRespon
       amount: differenceAmount,
       percent: differencePercent,
     },
+    insufficientDataReason: undefined,
     askingPrice,
     condition: input.condition,
     mode: input.mode,

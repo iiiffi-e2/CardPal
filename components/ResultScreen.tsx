@@ -18,12 +18,15 @@ import { formatCurrency } from "@/lib/client/api";
 import { clearLastEvaluation, getKidMode, getLastEvaluation } from "@/lib/client/storage";
 import type { EvaluateResponse, EvaluationResult } from "@/lib/types";
 
-function actionVariant(result: EvaluationResult): "buy" | "negotiate" | "walk" {
+function actionVariant(result: EvaluationResult): "buy" | "negotiate" | "walk" | "surface" {
   if (result === "BUY") {
     return "buy";
   }
   if (result === "NEGOTIATE") {
     return "negotiate";
+  }
+  if (result === "INSUFFICIENT_DATA") {
+    return "surface";
   }
   return "walk";
 }
@@ -60,7 +63,7 @@ export function ResultScreen() {
 
   const buttonVariant = useMemo(() => (result ? actionVariant(result.result) : "surface"), [result]);
   const referenceSourceLabel = useMemo(() => {
-    if (!result) {
+    if (!result || !result.selectedVariant) {
       return "";
     }
     if (result.selectedVariant.referenceSource === "market") {
@@ -69,7 +72,7 @@ export function ResultScreen() {
     if (result.selectedVariant.referenceSource === "mid") {
       return "Mid reference";
     }
-    return "Average low/mid reference";
+    return "Fallback low reference";
   }, [result]);
   const explanationText = useMemo(() => {
     if (!result) {
@@ -84,6 +87,9 @@ export function ResultScreen() {
     }
     if (result.result === "NEGOTIATE") {
       return "This looks fair based on market. You can ask if they can go a bit lower.";
+    }
+    if (result.result === "INSUFFICIENT_DATA") {
+      return "We do not have enough price info yet. Let us check more details before deciding.";
     }
     return "This appears high based on market. Keep looking for a better one.";
   }, [kidMode, result]);
@@ -155,14 +161,28 @@ export function ResultScreen() {
             <p className="text-lg leading-relaxed font-semibold text-text-primary">{explanationText}</p>
           </CardShell>
 
-          <PriceBreakdown
-            askingPrice={result.askingPrice}
-            referencePrice={result.selectedVariant.adjustedPrice}
-            differenceAmount={result.difference.amount}
-            differencePercent={result.difference.percent}
-            kidMode={kidMode}
-            referenceLabel={`${referenceSourceLabel} (${result.selectedVariant.name}, adjusted for ${result.condition})`}
-          />
+          {result.selectedVariant && result.difference ? (
+            <PriceBreakdown
+              askingPrice={result.askingPrice}
+              referencePrice={result.selectedVariant.adjustedPrice}
+              differenceAmount={result.difference.amount}
+              differencePercent={result.difference.percent}
+              kidMode={kidMode}
+              referenceLabel={`${referenceSourceLabel} (${result.selectedVariant.name}, adjusted for ${result.condition})`}
+            />
+          ) : (
+            <CardShell className="space-y-2">
+              <p className="text-base font-semibold text-text-primary">Pricing data is limited</p>
+              <p className="text-sm text-text-secondary">
+                We could not find enough recent pricing to make a reliable comparison for this card.
+              </p>
+              {result.insufficientDataReason ? (
+                <p className="text-xs text-text-secondary">
+                  Reason: {result.insufficientDataReason}
+                </p>
+              ) : null}
+            </CardShell>
+          )}
 
           <CardShell className="space-y-4">
             <p className="text-xl font-extrabold tracking-tight text-text-primary">
@@ -208,13 +228,21 @@ export function ResultScreen() {
 
           <CardShell className="space-y-2">
             <p className="text-xs uppercase tracking-[0.16em] text-text-secondary">Pricing source used</p>
-            <p className={classes("text-sm text-text-secondary")}>
-              Based on market reference variant:{" "}
-              <span className="font-semibold text-text-primary">{result.selectedVariant.name}</span>
-            </p>
-            <p className={classes("text-sm text-text-secondary")}>
-              Raw reference: {formatCurrency(result.selectedVariant.referencePrice)} ({referenceSourceLabel.toLowerCase()})
-            </p>
+            {result.selectedVariant ? (
+              <>
+                <p className={classes("text-sm text-text-secondary")}>
+                  Based on market reference variant:{" "}
+                  <span className="font-semibold text-text-primary">{result.selectedVariant.name}</span>
+                </p>
+                <p className={classes("text-sm text-text-secondary")}>
+                  Raw reference: {formatCurrency(result.selectedVariant.referencePrice)} ({referenceSourceLabel.toLowerCase()})
+                </p>
+              </>
+            ) : (
+              <p className={classes("text-sm text-text-secondary")}>
+                No reliable market reference was available for this card.
+              </p>
+            )}
             <p className="text-xs text-text-secondary">
               This is guidance, not a guarantee. Live show prices and condition can vary.
             </p>

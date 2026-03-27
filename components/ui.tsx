@@ -18,6 +18,9 @@ function resultColorClasses(result: EvaluationResult): string {
   if (result === "NEGOTIATE") {
     return "bg-negotiate text-slate-900";
   }
+  if (result === "INSUFFICIENT_DATA") {
+    return "bg-slate-600 text-slate-100";
+  }
   return "bg-walk text-slate-50";
 }
 
@@ -123,7 +126,9 @@ export function ResultBadge({
     BUY: "Good deal!",
     NEGOTIATE: "Ask lower",
     WALK: "Too expensive",
+    INSUFFICIENT_DATA: "Need more info",
   }[result];
+  const resultLabel = result === "INSUFFICIENT_DATA" ? "INSUFFICIENT DATA" : result;
 
   return (
     <div
@@ -133,7 +138,7 @@ export function ResultBadge({
       )}
     >
       <p className="text-xs font-bold tracking-[0.18em] uppercase opacity-90">Suggested action</p>
-      <p className="mt-2 text-6xl font-black tracking-tight">{result}</p>
+      <p className="mt-2 text-6xl font-black tracking-tight">{resultLabel}</p>
       {kidMode ? <p className="mt-2 text-sm font-semibold opacity-90">{kidModeLabel}</p> : null}
     </div>
   );
