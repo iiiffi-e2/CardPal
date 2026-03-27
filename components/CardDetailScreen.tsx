@@ -224,6 +224,9 @@ export function CardDetailScreen() {
               <p className="text-sm text-text-secondary">
                 Market ~ ${marketHint}
               </p>
+              <p className="text-xs text-text-secondary">
+                Based on market listings. Live show prices and card condition can vary.
+              </p>
             </div>
           </CardShell>
 

@@ -125,6 +125,7 @@ function buildExplanation(params: {
   differenceAmount: number;
   condition: Condition;
   variantName: string;
+  referenceSource: "market" | "mid" | "avgLowMid";
   usedLowPriceRule: boolean;
 }): string {
   const diffLabel =
@@ -132,19 +133,26 @@ function buildExplanation(params: {
       ? `$${Math.abs(params.differenceAmount).toFixed(2)} above`
       : `$${Math.abs(params.differenceAmount).toFixed(2)} below`;
 
+  const sourceLabel =
+    params.referenceSource === "market"
+      ? "based on market data"
+      : "based on recent reference pricing";
+
   const lowRuleMessage = params.usedLowPriceRule
-    ? "Because this is a low-dollar card, CardPal used fixed dollar thresholds."
-    : "CardPal used ratio-based thresholds for this recommendation.";
+    ? "For low-dollar cards, CardPal uses fixed dollar guide thresholds."
+    : "CardPal uses ratio guide thresholds for this estimate.";
+
+  const cautionMessage = "Live show prices and condition can vary in person.";
 
   if (params.result === "BUY") {
-    return `BUY: the asking price is ${diffLabel} the adjusted ${params.condition} value for ${params.variantName}. ${lowRuleMessage}`;
+    return `This price looks favorable ${sourceLabel}: it is ${diffLabel} the adjusted ${params.condition} reference for ${params.variantName}. ${lowRuleMessage} ${cautionMessage}`;
   }
 
   if (params.result === "NEGOTIATE") {
-    return `NEGOTIATE: the asking price is close to the adjusted ${params.condition} value for ${params.variantName}. ${lowRuleMessage}`;
+    return `This price looks fair ${sourceLabel}: it is close to the adjusted ${params.condition} reference for ${params.variantName}. ${lowRuleMessage} ${cautionMessage}`;
   }
 
-  return `WALK: the asking price is meaningfully above the adjusted ${params.condition} value for ${params.variantName}. ${lowRuleMessage}`;
+  return `This price appears high ${sourceLabel}: it is ${diffLabel} the adjusted ${params.condition} reference for ${params.variantName}. ${lowRuleMessage} ${cautionMessage}`;
 }
 
 function decideResult(params: {
@@ -205,6 +213,7 @@ export async function evaluateCard(input: EvaluateInput): Promise<EvaluateRespon
       differenceAmount,
       condition: input.condition,
       variantName: selectedVariant.variantName,
+      referenceSource: selectedVariant.referenceSource,
       usedLowPriceRule: decision.usedLowPriceRule,
     }),
     scripts: scriptsForResult(decision.result, input.mode),

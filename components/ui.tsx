@@ -132,7 +132,7 @@ export function ResultBadge({
         resultColorClasses(result),
       )}
     >
-      <p className="text-xs font-bold tracking-[0.18em] uppercase opacity-90">Result</p>
+      <p className="text-xs font-bold tracking-[0.18em] uppercase opacity-90">Suggested action</p>
       <p className="mt-2 text-6xl font-black tracking-tight">{result}</p>
       {kidMode ? <p className="mt-2 text-sm font-semibold opacity-90">{kidModeLabel}</p> : null}
     </div>
@@ -141,16 +141,18 @@ export function ResultBadge({
 
 export function PriceBreakdown({
   askingPrice,
-  marketPrice,
+  referencePrice,
   differenceAmount,
   differencePercent,
   kidMode,
+  referenceLabel,
 }: {
   askingPrice: number;
-  marketPrice: number;
+  referencePrice: number;
   differenceAmount: number;
   differencePercent: number;
   kidMode: boolean;
+  referenceLabel: string;
 }) {
   const positive = differenceAmount > 0;
   const differenceColor = positive ? "text-walk" : "text-buy";
@@ -164,8 +166,8 @@ export function PriceBreakdown({
           <dd className="font-bold text-text-primary">{formatCurrency(askingPrice)}</dd>
         </div>
         <div className="flex items-center justify-between gap-3">
-          <dt className="text-text-secondary">Market</dt>
-          <dd className="font-bold text-text-primary">{formatCurrency(marketPrice)}</dd>
+          <dt className="text-text-secondary">{referenceLabel}</dt>
+          <dd className="font-bold text-text-primary">{formatCurrency(referencePrice)}</dd>
         </div>
         <div className="flex items-center justify-between gap-3">
           <dt className="text-text-secondary">Difference</dt>
@@ -176,6 +178,9 @@ export function PriceBreakdown({
           </dd>
         </div>
       </dl>
+      <p className="text-xs text-text-secondary">
+        Quick guide only: live show prices and card condition can vary.
+      </p>
     </CardShell>
   );
 }

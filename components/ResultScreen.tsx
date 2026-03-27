@@ -59,6 +59,18 @@ export function ResultScreen() {
   const { result, error } = evaluationState;
 
   const buttonVariant = useMemo(() => (result ? actionVariant(result.result) : "surface"), [result]);
+  const referenceSourceLabel = useMemo(() => {
+    if (!result) {
+      return "";
+    }
+    if (result.selectedVariant.referenceSource === "market") {
+      return "Market reference";
+    }
+    if (result.selectedVariant.referenceSource === "mid") {
+      return "Mid reference";
+    }
+    return "Average low/mid reference";
+  }, [result]);
   const explanationText = useMemo(() => {
     if (!result) {
       return "";
@@ -68,12 +80,12 @@ export function ResultScreen() {
     }
 
     if (result.result === "BUY") {
-      return "Great find. This price is lower than expected.";
+      return "Great find. Based on market pricing, this looks fair or better.";
     }
     if (result.result === "NEGOTIATE") {
-      return "Close price. Ask if they can go a bit lower.";
+      return "This looks fair based on market. You can ask if they can go a bit lower.";
     }
-    return "This one costs too much right now. Keep looking.";
+    return "This appears high based on market. Keep looking for a better one.";
   }, [kidMode, result]);
 
   const copyScript = async (script: string, index: number) => {
@@ -91,7 +103,7 @@ export function ResultScreen() {
   };
 
   return (
-    <PageShell title="Recommendation" subtitle="Fast decision for this deal.">
+    <PageShell title="Recommendation" subtitle="A confident guide based on market data, not a guarantee.">
       <CardShell>
         <Link
           href={cardId ? `/card/${encodeURIComponent(cardId)}` : "/"}
@@ -145,10 +157,11 @@ export function ResultScreen() {
 
           <PriceBreakdown
             askingPrice={result.askingPrice}
-            marketPrice={result.selectedVariant.adjustedPrice}
+            referencePrice={result.selectedVariant.adjustedPrice}
             differenceAmount={result.difference.amount}
             differencePercent={result.difference.percent}
             kidMode={kidMode}
+            referenceLabel={`${referenceSourceLabel} (${result.selectedVariant.name}, adjusted for ${result.condition})`}
           />
 
           <CardShell className="space-y-4">
@@ -193,15 +206,19 @@ export function ResultScreen() {
             </PrimaryButton>
           </div>
 
-          {!kidMode ? (
-            <CardShell className="space-y-1">
-              <p className="text-xs uppercase tracking-[0.16em] text-text-secondary">Pricing source</p>
-              <p className={classes("text-sm text-text-secondary")}>
-                {result.selectedVariant.name} · {result.selectedVariant.referenceSource} ·{" "}
-                {formatCurrency(result.selectedVariant.referencePrice)}
-              </p>
-            </CardShell>
-          ) : null}
+          <CardShell className="space-y-2">
+            <p className="text-xs uppercase tracking-[0.16em] text-text-secondary">Pricing source used</p>
+            <p className={classes("text-sm text-text-secondary")}>
+              Based on market reference variant:{" "}
+              <span className="font-semibold text-text-primary">{result.selectedVariant.name}</span>
+            </p>
+            <p className={classes("text-sm text-text-secondary")}>
+              Raw reference: {formatCurrency(result.selectedVariant.referencePrice)} ({referenceSourceLabel.toLowerCase()})
+            </p>
+            <p className="text-xs text-text-secondary">
+              This is guidance, not a guarantee. Live show prices and condition can vary.
+            </p>
+          </CardShell>
         </>
       ) : null}
     </PageShell>
