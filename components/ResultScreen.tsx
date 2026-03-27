@@ -101,9 +101,14 @@ export function ResultScreen() {
       {error ? (
         <CardShell className="space-y-3">
           <p className="text-base text-walk">{error}</p>
-          <Link href={cardId ? `/card/${encodeURIComponent(cardId)}` : "/"}>
-            <PrimaryButton variant="surface">Return to card</PrimaryButton>
-          </Link>
+          <PrimaryButton
+            variant="surface"
+            onClick={() => {
+              router.push(cardId ? `/card/${encodeURIComponent(cardId)}` : "/");
+            }}
+          >
+            Return to card
+          </PrimaryButton>
         </CardShell>
       ) : null}
 
@@ -163,11 +168,16 @@ export function ResultScreen() {
           </CardShell>
 
           <div className="space-y-3">
-            <Link
-              href={`/card/${encodeURIComponent(cardId)}?asking=${encodeURIComponent(String(result.askingPrice))}&condition=${encodeURIComponent(result.condition)}`}
+            <PrimaryButton
+              variant={buttonVariant}
+              onClick={() => {
+                router.push(
+                  `/card/${encodeURIComponent(cardId)}?asking=${encodeURIComponent(String(result.askingPrice))}&condition=${encodeURIComponent(result.condition)}`,
+                );
+              }}
             >
-              <PrimaryButton variant={buttonVariant}>Try another price</PrimaryButton>
-            </Link>
+              Try another price
+            </PrimaryButton>
             <PrimaryButton
               variant="surface"
               onClick={() => {
