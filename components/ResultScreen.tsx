@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { CardShell, PageShell, PrimaryButton } from "@/components/ui";
 import { formatCurrency } from "@/lib/client/api";
@@ -32,27 +32,29 @@ function badgeStyles(result: EvaluationResult): { badge: string; button: "buy" |
 export function ResultScreen() {
   const params = useParams<{ id: string }>();
   const cardId = params.id;
-  const [result, setResult] = useState<EvaluateResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-
-  useEffect(() => {
+  const evaluationState = useMemo(() => {
     const raw = getLastEvaluation();
     if (!raw) {
-      setError("No recent recommendation found. Please run an evaluation first.");
-      return;
+      return {
+        result: null,
+        error: "No recent recommendation found. Please run an evaluation first.",
+      };
     }
     try {
       const parsed = JSON.parse(raw) as EvaluateResponse;
       if (parsed.card.id !== cardId) {
-        setError("Recommendation mismatch. Please evaluate this card again.");
-        return;
+        return {
+          result: null,
+          error: "Recommendation mismatch. Please evaluate this card again.",
+        };
       }
-      setResult(parsed);
+      return { result: parsed, error: null };
     } catch {
-      setError("Could not read recommendation data.");
+      return { result: null, error: "Could not read recommendation data." };
     }
   }, [cardId]);
+  const { result, error } = evaluationState;
 
   const styles = useMemo(
     () => (result ? badgeStyles(result.result) : { badge: "", button: "ghost" as const }),

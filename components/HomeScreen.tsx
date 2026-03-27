@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { CardShell, PageShell, PrimaryButton } from "@/components/ui";
@@ -9,13 +9,10 @@ import { addRecentSearch, getKidMode, getRecentSearches, setKidMode } from "@/li
 export function HomeScreen() {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const [kidMode, setKidModeState] = useState(false);
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
-
-  useEffect(() => {
-    setKidModeState(getKidMode());
-    setRecentSearches(getRecentSearches());
-  }, []);
+  const [kidMode, setKidModeState] = useState<boolean>(() => getKidMode());
+  const [recentSearches, setRecentSearches] = useState<string[]>(() =>
+    getRecentSearches(),
+  );
 
   const canSearch = useMemo(() => query.trim().length > 1, [query]);
 

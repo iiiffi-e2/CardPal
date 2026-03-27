@@ -116,7 +116,7 @@ function scriptsForResult(result: EvaluationResult, mode: EvaluationMode): strin
     },
   } as const;
 
-  return byMode[mode][result];
+  return [...byMode[mode][result]];
 }
 
 function buildExplanation(params: {

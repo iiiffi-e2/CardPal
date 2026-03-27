@@ -1,5 +1,11 @@
+import { Suspense } from "react";
+
 import { SearchResultsScreen } from "@/components/SearchResultsScreen";
 
 export default function SearchPage() {
-  return <SearchResultsScreen />;
+  return (
+    <Suspense fallback={null}>
+      <SearchResultsScreen />
+    </Suspense>
+  );
 }
