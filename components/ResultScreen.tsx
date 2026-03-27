@@ -5,34 +5,34 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
-import { CardShell, PageShell, PrimaryButton } from "@/components/ui";
+import {
+  CardShell,
+  PageShell,
+  PriceBreakdown,
+  PrimaryButton,
+  ResultBadge,
+  ScriptCard,
+  classes,
+} from "@/components/ui";
 import { formatCurrency } from "@/lib/client/api";
-import { clearLastEvaluation, getLastEvaluation } from "@/lib/client/storage";
+import { clearLastEvaluation, getKidMode, getLastEvaluation } from "@/lib/client/storage";
 import type { EvaluateResponse, EvaluationResult } from "@/lib/types";
 
-function badgeStyles(result: EvaluationResult): { badge: string; button: "buy" | "negotiate" | "walk" } {
+function actionVariant(result: EvaluationResult): "buy" | "negotiate" | "walk" {
   if (result === "BUY") {
-    return {
-      badge: "bg-emerald-100 text-emerald-800 border-emerald-300",
-      button: "buy",
-    };
+    return "buy";
   }
   if (result === "NEGOTIATE") {
-    return {
-      badge: "bg-amber-100 text-amber-900 border-amber-300",
-      button: "negotiate",
-    };
+    return "negotiate";
   }
-  return {
-    badge: "bg-rose-100 text-rose-800 border-rose-300",
-    button: "walk",
-  };
+  return "walk";
 }
 
 export function ResultScreen() {
   const params = useParams<{ id: string }>();
   const cardId = params.id;
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [kidMode] = useState(() => getKidMode());
   const evaluationState = useMemo(() => {
     const raw = getLastEvaluation();
     if (!raw) {
@@ -56,10 +56,23 @@ export function ResultScreen() {
   }, [cardId]);
   const { result, error } = evaluationState;
 
-  const styles = useMemo(
-    () => (result ? badgeStyles(result.result) : { badge: "", button: "ghost" as const }),
-    [result],
-  );
+  const buttonVariant = useMemo(() => (result ? actionVariant(result.result) : "surface"), [result]);
+  const explanationText = useMemo(() => {
+    if (!result) {
+      return "";
+    }
+    if (!kidMode) {
+      return result.explanation;
+    }
+
+    if (result.result === "BUY") {
+      return "Great find. This price is lower than expected.";
+    }
+    if (result.result === "NEGOTIATE") {
+      return "Close price. Ask if they can go a bit lower.";
+    }
+    return "This one costs too much right now. Keep looking.";
+  }, [kidMode, result]);
 
   const copyScript = async (script: string, index: number) => {
     try {
@@ -74,112 +87,104 @@ export function ResultScreen() {
   };
 
   return (
-    <PageShell title="Recommendation" subtitle="CardPal decision summary and talking scripts.">
+    <PageShell title="Recommendation" subtitle="Fast decision for this deal.">
       <CardShell>
-        <Link href={cardId ? `/card/${encodeURIComponent(cardId)}` : "/"} className="text-sm font-medium text-blue-700">
-          ← Back to card
+        <Link
+          href={cardId ? `/card/${encodeURIComponent(cardId)}` : "/"}
+          className="text-base font-semibold text-text-secondary"
+        >
+          Back
         </Link>
       </CardShell>
 
       {error ? (
-        <CardShell className="space-y-3 border-rose-200">
-          <p className="text-sm text-rose-700">{error}</p>
+        <CardShell className="space-y-3">
+          <p className="text-base text-walk">{error}</p>
           <Link href={cardId ? `/card/${encodeURIComponent(cardId)}` : "/"}>
-            <PrimaryButton variant="ghost">Return to card</PrimaryButton>
+            <PrimaryButton variant="surface">Return to card</PrimaryButton>
           </Link>
         </CardShell>
       ) : null}
 
       {result ? (
         <>
-          <CardShell className="space-y-3">
-            <div className="flex items-center gap-3">
+          <CardShell className="space-y-5">
+            <div className="flex items-center gap-4">
               {result.card.imageSmall ? (
                 <Image
                   src={result.card.imageSmall}
                   alt={result.card.name}
-                  width={68}
-                  height={94}
-                  className="h-[94px] w-[68px] rounded-md object-cover"
+                  width={78}
+                  height={108}
+                  className="h-[108px] w-[78px] rounded-lg object-cover"
                 />
               ) : (
-                <div className="h-[94px] w-[68px] rounded-md bg-slate-200" />
+                <div className="h-[108px] w-[78px] rounded-lg bg-slate-700" />
               )}
               <div className="min-w-0">
-                <p className="truncate text-base font-bold text-slate-900">{result.card.name}</p>
-                <p className="text-sm text-slate-600">
-                  {result.card.setName} • #{result.card.number}
+                <p className="truncate text-xl font-extrabold tracking-tight text-text-primary">{result.card.name}</p>
+                <p className="text-sm text-text-secondary">
+                  {result.card.setName} #{result.card.number}
                 </p>
               </div>
             </div>
 
-            <div className={`rounded-2xl border px-4 py-5 text-center ${styles.badge}`}>
-              <p className="text-xs font-semibold tracking-[0.18em]">DECISION</p>
-              <p className="mt-1 text-4xl font-extrabold">{result.result}</p>
-            </div>
+            <ResultBadge result={result.result} kidMode={kidMode} />
 
-            <p className="text-sm leading-relaxed text-slate-700">{result.explanation}</p>
+            <p className="text-lg leading-relaxed font-semibold text-text-primary">{explanationText}</p>
           </CardShell>
 
-          <CardShell className="space-y-2">
-            <p className="text-sm font-semibold text-slate-900">Price breakdown</p>
-            <dl className="space-y-2 text-sm text-slate-700">
-              <div className="flex items-center justify-between gap-3">
-                <dt>Selected variant</dt>
-                <dd className="font-semibold">{result.selectedVariant.name}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt>Reference ({result.selectedVariant.referenceSource})</dt>
-                <dd className="font-semibold">{formatCurrency(result.selectedVariant.referencePrice)}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt>Adjusted ({result.condition})</dt>
-                <dd className="font-semibold">{formatCurrency(result.selectedVariant.adjustedPrice)}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt>Asking price</dt>
-                <dd className="font-semibold">{formatCurrency(result.askingPrice)}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt>Difference</dt>
-                <dd className={`font-bold ${result.difference.amount <= 0 ? "text-emerald-700" : "text-rose-700"}`}>
-                  {result.difference.amount > 0 ? "+" : ""}
-                  {formatCurrency(result.difference.amount)} ({result.difference.percent > 0 ? "+" : ""}
-                  {result.difference.percent}%)
-                </dd>
-              </div>
-            </dl>
-          </CardShell>
+          <PriceBreakdown
+            askingPrice={result.askingPrice}
+            marketPrice={result.selectedVariant.adjustedPrice}
+            differenceAmount={result.difference.amount}
+            differencePercent={result.difference.percent}
+            kidMode={kidMode}
+          />
 
-          <CardShell className="space-y-3">
-            <p className="text-sm font-semibold text-slate-900">
-              Suggested scripts ({result.mode === "kid" ? "Kid mode" : "Standard"})
+          <CardShell className="space-y-4">
+            <p className="text-xl font-extrabold tracking-tight text-text-primary">
+              What to say
             </p>
-            <ul className="space-y-2">
+            <p className="text-sm text-text-secondary">
+              {kidMode ? "Short and friendly lines you can use." : "Use one of these lines at the table."}
+            </p>
+            <ul className="space-y-3">
               {result.scripts.map((script, index) => (
-                <li key={`${script}-${index}`} className="space-y-2 rounded-xl bg-slate-50 p-3">
-                  <p className="text-sm text-slate-800">{script}</p>
-                  <PrimaryButton
-                    variant="ghost"
-                    className="py-2 text-sm"
-                    onClick={() => void copyScript(script, index)}
-                  >
-                    {copiedIndex === index ? "Copied!" : "Copy script"}
-                  </PrimaryButton>
-                </li>
+                <ScriptCard
+                  key={`${script}-${index}`}
+                  script={script}
+                  copied={copiedIndex === index}
+                  onCopy={() => void copyScript(script, index)}
+                />
               ))}
             </ul>
           </CardShell>
 
-          <PrimaryButton
-            variant={styles.button}
-            onClick={() => {
-              clearLastEvaluation();
-              window.location.href = "/";
-            }}
-          >
-            Start New Search
-          </PrimaryButton>
+          <div className="space-y-3">
+            <Link href={`/card/${encodeURIComponent(cardId)}?asking=${encodeURIComponent(String(result.askingPrice))}`}>
+              <PrimaryButton variant={buttonVariant}>Try another price</PrimaryButton>
+            </Link>
+            <PrimaryButton
+              variant="surface"
+              onClick={() => {
+                clearLastEvaluation();
+                window.location.href = "/";
+              }}
+            >
+              Search another card
+            </PrimaryButton>
+          </div>
+
+          {!kidMode ? (
+            <CardShell className="space-y-1">
+              <p className="text-xs uppercase tracking-[0.16em] text-text-secondary">Pricing source</p>
+              <p className={classes("text-sm text-text-secondary")}>
+                {result.selectedVariant.name} · {result.selectedVariant.referenceSource} ·{" "}
+                {formatCurrency(result.selectedVariant.referencePrice)}
+              </p>
+            </CardShell>
+          ) : null}
         </>
       ) : null}
     </PageShell>
