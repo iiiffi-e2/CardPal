@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { CardShell, PageShell, PrimaryButton, classes } from "@/components/ui";
@@ -9,12 +9,13 @@ import { addRecentSearch, getKidMode, getRecentSearches, setKidMode } from "@/li
 export function HomeScreen() {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const [isPending, startTransition] = useTransition();
   const [kidMode, setKidModeState] = useState<boolean>(() => getKidMode());
   const [recentSearches, setRecentSearches] = useState<string[]>(() =>
     getRecentSearches(),
   );
 
-  const canSearch = useMemo(() => query.trim().length > 1, [query]);
+  const canSearch = useMemo(() => query.trim().length > 1 && !isPending, [isPending, query]);
 
   const goToSearch = (searchText: string) => {
     const trimmed = searchText.trim();
@@ -23,7 +24,9 @@ export function HomeScreen() {
     }
     const nextSearches = addRecentSearch(trimmed);
     setRecentSearches(nextSearches);
-    router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+    startTransition(() => {
+      router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+    });
   };
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -57,7 +60,7 @@ export function HomeScreen() {
           />
         </div>
         <PrimaryButton type="submit" disabled={!canSearch}>
-          Find Card
+          {isPending ? "Opening results..." : "Find Card"}
         </PrimaryButton>
       </form>
 
